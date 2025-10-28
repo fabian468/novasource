@@ -4,14 +4,15 @@ from tkinter import messagebox
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime
-from estilos_excel import aplicar_formato_simple, aplicar_formato_con_horas
+# from styles.estilos_excel import aplicar_formato_con_horas
+from estilos_excel import aplicar_formato_con_horas
 import os 
 
 root = tk.Tk()
 root.withdraw()
 
-archivo = r"C:\Users\fabia\OneDrive\Escritorio\prueba\20251027_1228_InstruccionCDC Prorrata Generalizada costo SEN 0.xlsx"
-# carpeta_donde_guardar = r"C:/Users/fabia/OneDrive/Escritorio/prueba/"
+archivo = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\20251027_1328_InstruccionCDC Prorrata Generalizada costo SEN 0.xlsx"
+carpeta_donde_guardar = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\"
 
 def eliminar_columnas_innecesarias(filtro):
     columnas_a_eliminar = ["PMAX (MW)", "PMIN (MW)", "SUBE/BAJA", ""]
@@ -114,7 +115,7 @@ def crearFiltro(archivo , carpeta_donde_guardar):
         # filtro.to_excel(writer, sheet_name="Filtro_PFV2", index=False)
         # aplicar_formato_simple(writer, "Filtro_PFV2", filtro)
 
-        filtro3.to_excel(writer, sheet_name=fecha_hoja, index=False)
+        filtro3.to_excel(writer, sheet_name=fecha_hoja,index=False)
         aplicar_formato_con_horas(writer,fecha_hoja, filtro3)
 
     # messagebox.showinfo("Éxito", f"Archivo procesado correctamente.\nGuardado como: {nuevo_nombre}")
@@ -127,4 +128,4 @@ def crearFiltro(archivo , carpeta_donde_guardar):
 
 
 
-# crearFiltro(archivo)
+crearFiltro(archivo,carpeta_donde_guardar=carpeta_donde_guardar)
