@@ -173,7 +173,7 @@ def crearFiltro(archivo , carpeta_donde_guardar):
         print("✗ La columna 'GENERADORA' no se encontró.")
         return
 
-    filtro = df[df["GENERADORA"].isin(["PFV-ELPELICANO", "PFV-LAHUELLA"])]
+    filtro = df[df["GENERADORA"].isin(["PFV-ELPELICANO", "PFV-LAHUELLA", "PFV-ELROMERO"])]
     filtro = eliminar_columnas_innecesarias(filtro)
     filtro3 , fecha = ordenar_columnas(filtro)
 

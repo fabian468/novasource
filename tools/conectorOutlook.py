@@ -11,8 +11,8 @@ import pandas as pd
 root = tk.Tk()
 root.withdraw()
 ruta_script = os.path.dirname(os.path.abspath(__file__))
-
-attachment_folder = "C:\\adjuntos_prorrata" 
+print(ruta_script)
+attachment_folder = ruta_script 
 os.makedirs(attachment_folder, exist_ok=True)
 fecha_actual = datetime.now().strftime("%Y-%m-%d")
 ahora =datetime.now()
@@ -22,8 +22,9 @@ os.makedirs(attachment_folder_fecha, exist_ok=True)
 # and message.SenderName=="CDC"
 i = 0
 
-dia_hoy =str(ahora.day-1)
+dia_hoy =str(ahora.day-2)
 mes_hoy =str(ahora.month)
+print(dia_hoy)
 
 def unir_excels_en_carpeta(carpeta, nombre_salida="excel_unido.xlsx"):
     archivos = glob.glob(os.path.join(carpeta, "*.xlsx")) + glob.glob(os.path.join(carpeta, "*.xls"))
@@ -59,7 +60,9 @@ def unir_excels_en_carpeta(carpeta, nombre_salida="excel_unido.xlsx"):
 def buscar_correo():
     contador_de_mensajes=0
     outlook = win32com.client.Dispatch("Outlook.Application").GetNamespace("MAPI")
-    inbox = outlook.GetDefaultFolder(6)
+    #inbox = outlook.GetDefaultFolder(6)
+
+    inbox = outlook.Folders('crocc.operator').Folders('Inbox')
     messages = inbox.Items
 
     print("Empezando analisis...")
@@ -68,6 +71,8 @@ def buscar_correo():
         # i += 1
         # if(i == 10):
         #     break
+        
+
         try:        
             received_time_pywintype = message.ReceivedTime
             # received_time_datetime = datetime.datetime(
@@ -76,10 +81,18 @@ def buscar_correo():
             #         received_time_pywintype.day,
             #     )
             # print(received_time_datetime)            
-            if(received_time_pywintype.day != dia_hoy and received_time_pywintype.month !=mes_hoy):
+            if(received_time_pywintype.day == dia_hoy ):
                 break
-            if(((message.subject=="[EXT]: Inicia Prorrata LT 500 kV Nueva Pan de Azúcar - Polpaico") or (messages.subject == "[EXT]: Ajuste Prorrata Generalizada costo SEN 0"))and message.SenderName=="CDC" ):
+
+            asuntos=["[EXT]: Inicia Prorrata LT 500 kV Nueva Pan de Azúcar - Polpaico",
+                     "[EXT]: Ajuste Prorrata Generalizada costo SEN 0",
+                     "[EXT]: Finaliza Prorrata LT 500 kV Nueva Pan de Azúcar - Polpaico",
+                     "[EXT]: Ajuste Prorrata LT 500 kV Nueva Pan de Azúcar - Polpaico"
+                     ]
+
+            if((message.subject in asuntos)and message.SenderName=="CDC" ):
                 contador_de_mensajes+=1
+                print(message.subject,message.ReceivedTime)
                 # print(message.subject,message.subject ==("[EXT]: Inicia Prorrata LT 500 kV Nueva Pan de Azúcar - Polpaico" or message.subject == "[EXT]: Ajuste Prorrata Generalizada costo SEN 0"))
                 # if(i == 2):
                 #     break
@@ -87,10 +100,12 @@ def buscar_correo():
                 if message.Attachments.Count > 0:
                     for attachment in message.Attachments:
                         full_path = os.path.join(attachment_folder_fecha, attachment.FileName)
+                        
                         attachment.SaveAsFile(full_path)
                         print(f"Downloaded: {attachment.FileName}")
-                path_full = unir_excels_en_carpeta(full_path, nombre_salida="excel_unido.xlsx")
-                crearFiltro(path_full, carpeta_donde_guardar=attachment_folder_fecha)
+
+            path_full = unir_excels_en_carpeta(full_path, nombre_salida="excel_unido.xlsx")
+            crearFiltro(attachment_folder_fecha, carpeta_donde_guardar=attachment_folder_fecha)
         
         except AttributeError:
             continue
