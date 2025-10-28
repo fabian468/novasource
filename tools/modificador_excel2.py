@@ -4,15 +4,17 @@ from tkinter import messagebox
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime
-# from styles.estilos_excel import aplicar_formato_con_horas
-from estilos_excel import aplicar_formato_con_horas
+from tools.estilos_excel import aplicar_formato_con_horas
 import os 
+
 
 root = tk.Tk()
 root.withdraw()
 
-archivo = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\20251027_1328_InstruccionCDC Prorrata Generalizada costo SEN 0.xlsx"
-carpeta_donde_guardar = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\"
+
+# archivo = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\20251027_1228_InstruccionCDC Prorrata Generalizada costo SEN 0.xlsx"
+# carpeta_donde_guardar = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\"
+
 
 def eliminar_columnas_innecesarias(filtro):
     columnas_a_eliminar = ["PMAX (MW)", "PMIN (MW)", "SUBE/BAJA", ""]
@@ -197,4 +199,4 @@ def crearFiltro(archivo , carpeta_donde_guardar):
 
 
 
-crearFiltro(archivo,carpeta_donde_guardar=carpeta_donde_guardar)
+# crearFiltro(unir_excels_en_carpeta(carpeta_donde_guardar),carpeta_donde_guardar=carpeta_donde_guardar)

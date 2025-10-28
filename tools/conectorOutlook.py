@@ -4,6 +4,8 @@ from tools.modificador_excel2 import crearFiltro
 import tkinter as tk 
 from tkinter import messagebox
 from datetime import datetime
+import glob
+import pandas as pd
 
 
 root = tk.Tk()
@@ -22,6 +24,37 @@ i = 0
 
 dia_hoy =str(ahora.day-1)
 mes_hoy =str(ahora.month)
+
+def unir_excels_en_carpeta(carpeta, nombre_salida="excel_unido.xlsx"):
+    archivos = glob.glob(os.path.join(carpeta, "*.xlsx")) + glob.glob(os.path.join(carpeta, "*.xls"))
+
+    if not archivos:
+        print(" No se encontraron archivos Excel en la carpeta indicada.")
+        return None
+    
+    dfs = []
+    for archivo in archivos:
+        try:
+            df = pd.read_excel(archivo)
+            df["Archivo_Origen"] = os.path.basename(archivo)  # opcional: saber de qué archivo viene cada fila
+            dfs.append(df)
+        except Exception as e:
+            print(f" Error leyendo {archivo}: {e}")
+
+    if not dfs:
+        print(" No se pudieron leer los archivos.")
+        return None
+
+    # Combinar todos los DataFrames
+    df_unido = pd.concat(dfs, ignore_index=True)
+
+    # Guardar el archivo combinado
+    salida = os.path.join(carpeta, nombre_salida)
+    df_unido.to_excel(salida, index=False)
+    print(f"Archivos combinados correctamente en: {salida}")
+
+    return salida
+
 
 def buscar_correo():
     contador_de_mensajes=0
@@ -42,14 +75,10 @@ def buscar_correo():
             #         received_time_pywintype.month,
             #         received_time_pywintype.day,
             #     )
-            # print(received_time_datetime)
-
-
-            
+            # print(received_time_datetime)            
             if(received_time_pywintype.day != dia_hoy and received_time_pywintype.month !=mes_hoy):
                 break
             if(((message.subject=="[EXT]: Inicia Prorrata LT 500 kV Nueva Pan de Azúcar - Polpaico") or (messages.subject == "[EXT]: Ajuste Prorrata Generalizada costo SEN 0"))and message.SenderName=="CDC" ):
-                
                 contador_de_mensajes+=1
                 # print(message.subject,message.subject ==("[EXT]: Inicia Prorrata LT 500 kV Nueva Pan de Azúcar - Polpaico" or message.subject == "[EXT]: Ajuste Prorrata Generalizada costo SEN 0"))
                 # if(i == 2):
@@ -60,9 +89,8 @@ def buscar_correo():
                         full_path = os.path.join(attachment_folder_fecha, attachment.FileName)
                         attachment.SaveAsFile(full_path)
                         print(f"Downloaded: {attachment.FileName}")
-
-                        crearFiltro(full_path, carpeta_donde_guardar=attachment_folder_fecha)
-
+                path_full = unir_excels_en_carpeta(full_path, nombre_salida="excel_unido.xlsx")
+                crearFiltro(path_full, carpeta_donde_guardar=attachment_folder_fecha)
         
         except AttributeError:
             continue
