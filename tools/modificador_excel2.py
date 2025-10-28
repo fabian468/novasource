@@ -13,8 +13,6 @@ root.withdraw()
 archivo = r"C:\Users\fabia\OneDrive\Escritorio\prueba\20251027_1228_InstruccionCDC Prorrata Generalizada costo SEN 0.xlsx"
 # carpeta_donde_guardar = r"C:/Users/fabia/OneDrive/Escritorio/prueba/"
 
-print("Iniciando el procesamiento del archivo:", archivo)
-
 def eliminar_columnas_innecesarias(filtro):
     columnas_a_eliminar = ["PMAX (MW)", "PMIN (MW)", "SUBE/BAJA", ""]
     filtro = filtro.drop(columns=[col for col in columnas_a_eliminar if col in filtro.columns], errors="ignore")
