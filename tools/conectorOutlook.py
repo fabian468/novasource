@@ -1,6 +1,7 @@
 import win32com.client
 import os
-from tools.modificador_excel2 import crearFiltro
+from modificador_excel2 import crearFiltro
+# from tools.modificador_excel2 import crearFiltro
 import tkinter as tk 
 from tkinter import messagebox
 from datetime import datetime
@@ -10,12 +11,16 @@ import pandas as pd
 
 root = tk.Tk()
 root.withdraw()
+
 ruta_script = os.path.dirname(os.path.abspath(__file__))
 print(ruta_script)
+
 attachment_folder = ruta_script 
 os.makedirs(attachment_folder, exist_ok=True)
+
 fecha_actual = datetime.now().strftime("%Y-%m-%d")
 ahora =datetime.now()
+
 attachment_folder_fecha= os.path.join(attachment_folder, fecha_actual)
 os.makedirs(attachment_folder_fecha, exist_ok=True)
 
