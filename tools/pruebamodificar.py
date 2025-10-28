@@ -4,19 +4,14 @@ from tkinter import messagebox
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime
-# Asegúrate de que 'aplicar_formato_con_horas' esté correctamente definido en 'estilos_excel.py'
-from estilos_excel import aplicar_formato_con_horas 
+from estilos_excel import aplicar_formato_con_horas
 import os 
-
 
 root = tk.Tk()
 root.withdraw()
 
-# Rutas de ejemplo
-archivo = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\20251027_1328_InstruccionCDC Prorrata Generalizada costo SEN 0.xlsx"
+archivo = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\20251027_1228_InstruccionCDC Prorrata Generalizada costo SEN 0.xlsx"
 carpeta_donde_guardar = r"C:\\Users\\GabrielBenelli\\Desktop\\prueba\\"
-
-# --- Funciones Auxiliares ---
 
 def eliminar_columnas_innecesarias(filtro):
     columnas_a_eliminar = ["PMAX (MW)", "PMIN (MW)", "SUBE/BAJA", ""]
@@ -32,11 +27,7 @@ def ordenar_columnas(filtro):
     
     if 'HORA' in filtro.columns:
         if 'FECHA' in filtro.columns:
-            # Convierte a objeto date de Python (elimina la hora/timestamp)
             filtro['FECHA'] = pd.to_datetime(filtro['FECHA']).dt.date
-            
-            # Convierte inmediatamente a str para evitar errores de tipo en pd.merge
-            filtro['FECHA'] = filtro['FECHA'].astype(str)
         
         dfs = []
         for columna in columnas_deseadas:
@@ -52,9 +43,6 @@ def ordenar_columnas(filtro):
         
         if dfs:
             resultado = pd.concat(dfs, axis=1).reset_index()
-            
-            # Asegurar que FECHA sigue siendo string después del reset_index
-            resultado['FECHA'] = resultado['FECHA'].astype(str)
             
             horas_unicas = []
             for col in resultado.columns:
@@ -84,31 +72,119 @@ def ordenar_columnas(filtro):
                     hora = partes[0]
                     tipo = partes[1] if len(partes) > 1 else ''
                     
-                    # Renombrado de columna para dejar solo el tipo
                     if 'GEN.ACTUAL' in tipo:
-                        rename_dict[col] = f'{hora}_GEN.ACTUAL' # Se mantiene la hora en el nombre para la fusión
+                        rename_dict[col] = 'GEN.ACTUAL'
                     elif 'MONTO' in tipo:
-                        rename_dict[col] = f'{hora}_MONTO'
+                        rename_dict[col] = 'MONTO'
                     elif 'CONSIGNA' in tipo:
-                        rename_dict[col] = f'{hora}_CONSIGNA'
+                        rename_dict[col] = 'CONSIGNA'
             
             resultado = resultado.rename(columns=rename_dict)
             
             resultado.attrs['horas_ordenadas'] = horas_unicas_sorted
             
-            # Devuelve el primer valor de FECHA (que ya es str)
-            return resultado , filtro['FECHA'].unique()[0]
+            return resultado, filtro['FECHA'].unique()[0]
     
-    return filtro
+    return filtro, None
 
 
-# --- Función Principal (Modificada) ---
+def combinar_con_archivo_existente(df_nuevo, fecha_hoja, archivo_salida):
+    """
+    Combina el DataFrame nuevo con datos existentes si la hoja ya existe.
+    Solo añade columnas de horas que no existen previamente.
+    """
+    if not os.path.exists(archivo_salida):
+        return df_nuevo
+    
+    try:
+        # Leer la hoja existente
+        df_existente = pd.read_excel(archivo_salida, sheet_name=fecha_hoja)
+        
+        # Asegurar que ambos DataFrames tengan el mismo tipo de dato para FECHA
+        if 'FECHA' in df_existente.columns:
+            df_existente['FECHA'] = pd.to_datetime(df_existente['FECHA']).dt.date
+        if 'FECHA' in df_nuevo.columns:
+            df_nuevo['FECHA'] = pd.to_datetime(df_nuevo['FECHA']).dt.date
+        
+        # Obtener las horas existentes y las nuevas
+        horas_existentes = set()
+        horas_nuevas = set()
+        
+        columnas_fijas = ['FECHA', 'GENERADORA']
+        
+        for col in df_existente.columns:
+            if col not in columnas_fijas:
+                # Extraer el número de hora de columnas como "1_GEN.ACTUAL"
+                hora = col.split('_')[0] if '_' in str(col) else col
+                horas_existentes.add(hora)
+        
+        for col in df_nuevo.columns:
+            if col not in columnas_fijas:
+                hora = col.split('_')[0] if '_' in str(col) else col
+                horas_nuevas.add(hora)
+        
+        # Identificar horas que realmente son nuevas
+        horas_a_agregar = horas_nuevas - horas_existentes
+        
+        if not horas_a_agregar:
+            print(f"⚠ No hay horas nuevas para agregar en la fecha {fecha_hoja}")
+            return df_existente
+        
+        print(f"✓ Agregando horas nuevas: {sorted(horas_a_agregar)}")
+        
+        # Filtrar solo las columnas de las horas nuevas del df_nuevo
+        columnas_a_agregar = columnas_fijas.copy()
+        for col in df_nuevo.columns:
+            if col not in columnas_fijas:
+                hora = col.split('_')[0] if '_' in str(col) else col
+                if hora in horas_a_agregar:
+                    columnas_a_agregar.append(col)
+        
+        df_nuevas_horas = df_nuevo[columnas_a_agregar]
+        
+        # Hacer merge en FECHA y GENERADORA
+        df_combinado = pd.merge(
+            df_existente,
+            df_nuevas_horas,
+            on=['FECHA', 'GENERADORA'],
+            how='outer'
+        )
+        
+        # Reordenar columnas: FECHA, GENERADORA, luego por horas ordenadas
+        todas_horas = horas_existentes.union(horas_nuevas)
+        try:
+            horas_ordenadas = sorted([int(h) for h in todas_horas])
+        except:
+            horas_ordenadas = sorted(todas_horas)
+        
+        columnas_ordenadas = columnas_fijas.copy()
+        columnas_deseadas = ['GEN.ACTUAL', 'MONTO', 'CONSIGNA']
+        
+        for hora in horas_ordenadas:
+            for sufijo in columnas_deseadas:
+                # Buscar la columna exacta en el DataFrame
+                for col in df_combinado.columns:
+                    if col not in columnas_fijas and str(hora) in str(col) and sufijo in str(col):
+                        if col not in columnas_ordenadas:
+                            columnas_ordenadas.append(col)
+        
+        df_combinado = df_combinado[columnas_ordenadas]
+        df_combinado.attrs['horas_ordenadas'] = horas_ordenadas
+        
+        return df_combinado
+        
+    except Exception as e:
+        print(f"⚠ Error al combinar con archivo existente: {e}")
+        return df_nuevo
+
 
 def crearFiltro(archivo, carpeta_donde_guardar):
+    # Leer el Excel original
     xls = pd.ExcelFile(archivo)
     hoja_origen = xls.sheet_names[0]
     df = pd.read_excel(archivo, sheet_name=hoja_origen)
 
+    # Verificar columna requerida
     if "GENERADORA" not in df.columns:
         messagebox.showerror("Error", "La columna 'GENERADORA' no se encontró.")
         print("✗ La columna 'GENERADORA' no se encontró.")
@@ -116,83 +192,34 @@ def crearFiltro(archivo, carpeta_donde_guardar):
 
     filtro = df[df["GENERADORA"].isin(["PFV-ELPELICANO", "PFV-LAHUELLA"])]
     filtro = eliminar_columnas_innecesarias(filtro)
-    # filtro3 ya tiene la FECHA como STR gracias a ordenar_columnas
-    filtro3, fecha = ordenar_columnas(filtro) 
+    filtro3, fecha = ordenar_columnas(filtro)
+
+    if fecha is None:
+        print("✗ No se pudo extraer la fecha del archivo.")
+        return
 
     fecha_hoja = str(fecha).replace("-", "_")
+    fecha_actual = datetime.now().strftime("%Y-%m-%d")
+    nuevo_nombre = os.path.join(carpeta_donde_guardar, f"Prorrata_procesada_{fecha_actual}.xlsx")
 
-    fecha_actual_str = datetime.now().strftime("%Y-%m-%d")
-    nuevo_nombre = os.path.join(carpeta_donde_guardar, f"Prorrata_procesada_{fecha_actual_str}.xlsx")
-    
+    # Combinar con datos existentes si la hoja ya existe
+    filtro3 = combinar_con_archivo_existente(filtro3, fecha_hoja, nuevo_nombre)
+
+    # Escribir el archivo
     if os.path.exists(nuevo_nombre):
-        try:
-            writer = pd.ExcelWriter(nuevo_nombre, engine="openpyxl", mode='a', if_sheet_exists='replace') 
-          
-            if fecha_hoja in writer.book.sheetnames:
-                df_existente = pd.read_excel(nuevo_nombre, sheet_name=fecha_hoja)
-            
-                df_existente['FECHA'] = df_existente['FECHA'].astype(str)
-                
-                horas_nuevas = filtro3.attrs.get('horas_ordenadas', [])
-                
-                horas_existentes = set()
-                for col in df_existente.columns:
-                    if col not in ['FECHA', 'GENERADORA']:
-                        try:
-                            hora = col.split('_')[0] 
-                            horas_existentes.add(hora)
-                        except:
-                            pass
-                    
-                horas_nuevas_a_añadir = [str(h) for h in horas_nuevas if str(h) not in horas_existentes]
-                
-                if horas_nuevas_a_añadir:
-                    columnas_a_mantener = ['FECHA', 'GENERADORA']
-                    columnas_nuevas = [col for col in filtro3.columns if col not in df_existente.columns and col not in ['FECHA', 'GENERADORA']]
-                    
-                    df_nuevas_horas = filtro3[columnas_a_mantener + columnas_nuevas]
-                    
-                    df_combinado = pd.merge(df_existente, df_nuevas_horas, on=['FECHA', 'GENERADORA'], how='left')
-                    
-                    columnas_existentes_ordenadas = [col for col in df_existente.columns if col not in ['FECHA', 'GENERADORA']]
-                    columnas_finales = ['FECHA', 'GENERADORA'] + columnas_existentes_ordenadas + columnas_nuevas
-                    df_combinado = df_combinado[columnas_finales]
-                    
-                    df_combinado.to_excel(writer, sheet_name=fecha_hoja, index=False)
-                    writer.close() 
-                    
-                    with pd.ExcelWriter(nuevo_nombre, engine="openpyxl", mode='a', if_sheet_exists='overlay') as writer_format:
-                        aplicar_formato_con_horas(writer_format, fecha_hoja, df_combinado)
-                    
-                    print(f"✓ Hoja '{fecha_hoja}' actualizada con nuevas horas: {horas_nuevas_a_añadir}")
-                    
-                else:
-                    print(f"⚠ La fecha '{fecha_hoja}' ya existe con las mismas horas. No se realizaron cambios.")
-            
-            else:
-                filtro3.to_excel(writer, sheet_name=fecha_hoja, index=False)
-                writer.close() 
-
-                with pd.ExcelWriter(nuevo_nombre, engine="openpyxl", mode='a', if_sheet_exists='overlay') as writer_format:
-                    aplicar_formato_con_horas(writer_format, fecha_hoja, filtro3)
-                    
-                print(f"✓ Hoja '{fecha_hoja}' creada.")
-
-        except Exception as e:
-            messagebox.showerror("Error", f"Error al procesar el archivo existente o crear el nuevo: {e}")
-            print(f"✗ Error al procesar: {e}")
-            return
-            
+        # Usar mode='a' para append, que automáticamente carga el workbook existente
+        with pd.ExcelWriter(nuevo_nombre, engine="openpyxl", mode='a', if_sheet_exists='replace') as writer:
+            filtro3.to_excel(writer, sheet_name=fecha_hoja, index=False)
+            aplicar_formato_con_horas(writer, fecha_hoja, filtro3)
     else:
-        try:
-            with pd.ExcelWriter(nuevo_nombre, engine="openpyxl") as writer:
-                filtro3.to_excel(writer, sheet_name=fecha_hoja, index=False)
-                aplicar_formato_con_horas(writer, fecha_hoja, filtro3)
-            print(f"✓ Archivo final creado y hoja '{fecha_hoja}' añadida.")
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Error al crear el archivo final: {e}")
-            print(f"✗ Error al crear: {e}")
-            return
-            
-crearFiltro(archivo,carpeta_donde_guardar=carpeta_donde_guardar)
+        # Crear archivo nuevo
+        with pd.ExcelWriter(nuevo_nombre, engine="openpyxl") as writer:
+            filtro3.to_excel(writer, sheet_name=fecha_hoja, index=False)
+            aplicar_formato_con_horas(writer, fecha_hoja, filtro3)
+
+    print(f"✓ Archivo procesado: {nuevo_nombre}")
+    print(f"✓ Hoja: {fecha_hoja}")
+
+
+# Ejemplo de uso procesando múltiples archivos
+crearFiltro(archivo, carpeta_donde_guardar=carpeta_donde_guardar)

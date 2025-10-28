@@ -89,6 +89,75 @@ def ordenar_columnas(filtro):
     return filtro
 
 
+def ordenar_columnas_para_horas_repetidas(filtro):
+    columnas_deseadas = [
+        'GEN.ACTUAL (MW)',
+        'MONTO SUBE/BAJA (MW)',
+        'CONSIGNA(MW)'
+    ]
+    
+    if 'HORA' in filtro.columns:
+        if 'FECHA' in filtro.columns:
+            filtro['FECHA'] = pd.to_datetime(filtro['FECHA']).dt.date
+        
+        dfs = []
+        for columna in columnas_deseadas:
+            if columna in filtro.columns:
+                pivot = filtro.pivot_table(
+                    columns='HORA',
+                    values=columna,
+                    aggfunc='first'
+                )
+                pivot.columns = [f'{hora}_{columna}' for hora in pivot.columns]
+                dfs.append(pivot)
+        
+        if dfs:
+            resultado = pd.concat(dfs, axis=1).reset_index()
+            
+            horas_unicas = []
+            for col in resultado.columns:
+                if col not in ['FECHA', 'GENERADORA']:
+                    hora = col.split('_')[0]
+                    if hora not in horas_unicas:
+                        horas_unicas.append(hora)            
+            try:
+                horas_unicas_sorted = sorted([int(h) for h in horas_unicas])
+            except:
+                horas_unicas_sorted = sorted(horas_unicas)
+            
+            nuevas_columnas = ['FECHA', 'GENERADORA']
+            for hora in horas_unicas_sorted:
+                for columna in columnas_deseadas:
+                    col_nombre = f'{hora}_{columna}'
+                    if col_nombre in resultado.columns:
+                        nuevas_columnas.append(col_nombre)
+            
+            resultado = resultado[nuevas_columnas]
+            
+            rename_dict = {}
+            for col in resultado.columns:
+                if col not in ['FECHA', 'GENERADORA']:
+                    partes = col.split('_')
+                    hora = partes[0]
+                    tipo = partes[1] if len(partes) > 1 else ''
+                    
+                    if 'GEN.ACTUAL' in tipo:
+                        rename_dict[col] = 'GEN.ACTUAL'
+                    elif 'MONTO' in tipo:
+                        rename_dict[col] = 'MONTO'
+                    elif 'CONSIGNA' in tipo:
+                        rename_dict[col] = 'CONSIGNA'
+            
+            resultado = resultado.rename(columns=rename_dict)
+            
+            resultado.attrs['horas_ordenadas'] = horas_unicas_sorted
+            
+            return resultado , filtro['FECHA'].unique()[0]
+    
+    return filtro
+
+
+
 
 def crearFiltro(archivo , carpeta_donde_guardar):
     # Leer el Excel original
