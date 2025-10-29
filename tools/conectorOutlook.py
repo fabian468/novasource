@@ -77,12 +77,18 @@ def buscar_correo():
                     if any(a in message.Subject.lower() for a in asuntos):
                         contador_de_mensajes += 1
                         
-                    
+                        extensiones_excel = ['.xlsx', '.xls', '.xlsm', '.xltx', '.xltm']
                         for attachment in message.Attachments:
-                            full_path = os.path.join(attachment_folder_fecha, attachment.FileName)
-                            attachment.SaveAsFile(full_path)
-                            archivos_descargados.append(full_path)
-                            
+                            nombre_archivo = attachment.FileName
+                            extension = os.path.splitext(nombre_archivo)[1].lower()
+                            if extension in extensiones_excel:
+                                full_path = os.path.join(attachment_folder_fecha, nombre_archivo)
+                                attachment.SaveAsFile(full_path)
+                                archivos_descargados.append(full_path)
+                                print(f"Descargado: {nombre_archivo}")
+                            else:
+                                print(f"Omitido (no es Excel): {nombre_archivo}")
+                                                
                             actualizar_progreso(ventana_prog, progress_bar, label_estado, label_detalle,
                                                progreso, "Descargando archivos...",
                                                f"Guardado: {attachment.FileName}")
