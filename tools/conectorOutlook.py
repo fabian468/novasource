@@ -40,8 +40,8 @@ def buscar_correo():
                            10, "Conectando con Outlook...")
         
         outlook = win32com.client.Dispatch("Outlook.Application").GetNamespace("MAPI")
-        # inbox = outlook.Folders('crocc.operator').Folders('Inbox')
-        inbox = outlook.GetDefaultFolder(6)
+        inbox = outlook.Folders('crocc.operator').Folders('Inbox')
+        # inbox = outlook.GetDefaultFolder(6)
         messages = inbox.Items
         messages.Sort("[ReceivedTime]", True)
         

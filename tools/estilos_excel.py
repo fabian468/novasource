@@ -2,7 +2,7 @@ from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image
 import pandas as pd
-
+from openpyxl.chart import LineChart, Reference, Series
 
 
 def insertar_logo(worksheet, path_logo="assets/logo.png", logo_height_rows=4, logo_width_cols=5):
@@ -91,7 +91,6 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
     
     horas_ordenadas = df.attrs.get('horas_ordenadas', [])
     
-    # ===== ENCABEZADOS =====
     if horas_ordenadas:
         cell = worksheet.cell(row=FILA_HORA_COMBINADA, column=1)
         cell.value = 'FECHA'
@@ -166,7 +165,6 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
         else:
             worksheet.column_dimensions[col_letter].width = 14
     
-    # ===== ESCRIBIR DATOS =====
     for i, row_data in enumerate(data_values):
         row_num_excel = DATA_START_ROW + i
         row_fill = row_fill_1 if i % 2 == 0 else row_fill_2
@@ -196,15 +194,11 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
             elif col_num == 1 and value:
                 cell.number_format = 'YYYY-MM-DD'
     
-    # ===== AGREGAR TABLA DE TOTALES =====
-    # Colocar la tabla de totales desde la columna E (columna 5)
     COLUMNA_INICIO_TOTALES = 5
     FILA_TOTALES_HEADER = DATA_START_ROW + len(data_values) + 2
     
-    # Calcular totales por generadora desde el DataFrame original
     generadoras = df['GENERADORA'].unique()
     
-    # Crear DataFrame para calcular totales
     totales_por_gen = {}
     for gen in generadoras:
         df_gen = df[df['GENERADORA'] == gen]
@@ -214,15 +208,14 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
             if col not in ['FECHA', 'GENERADORA'] and pd.api.types.is_numeric_dtype(df[col]):
                 totales_por_gen[gen][col] = df_gen[col].sum()
     
-    # Encabezado "totales"
+  
     cell = worksheet.cell(row=FILA_TOTALES_HEADER, column=COLUMNA_INICIO_TOTALES)
-    cell.value = "totales"
+    cell.value = "suma total"
     cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     cell.font = Font(bold=True, size=10)
     cell.alignment = Alignment(horizontal="center", vertical="center")
     cell.border = thin_border
     
-    # Encabezado "generadores"
     cell = worksheet.cell(row=FILA_TOTALES_HEADER + 1, column=COLUMNA_INICIO_TOTALES)
     cell.value = "generadores"
     cell.fill = totales_gen_fill
@@ -230,7 +223,6 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
     cell.alignment = Alignment(horizontal="center", vertical="center")
     cell.border = thin_border
     
-    # Encabezados de columnas (GEN.ACTUAL, MONTO, CONSIGNA)
     col_totales_map = {}
     col_num = COLUMNA_INICIO_TOTALES + 1
     for col_name in column_names:
@@ -255,10 +247,10 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
                 col_totales_map[tipo] = col_num
                 col_num += 1
     
-    # Datos de cada generadora
+
     fila_actual = FILA_TOTALES_HEADER + 1
+    
     for gen in generadoras:
-        # Nombre generadora
         cell = worksheet.cell(row=fila_actual, column=COLUMNA_INICIO_TOTALES)
         cell.value = gen
         cell.fill = totales_gen_fill
@@ -266,25 +258,20 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
         cell.alignment = Alignment(horizontal="left", vertical="center")
         cell.border = thin_border
         
-        # Totales por tipo usando fórmulas SUM horizontales
         for tipo, col_num_total in col_totales_map.items():
-            # Encontrar todas las columnas de datos que corresponden a este tipo
             columnas_a_sumar = []
             for idx, col_name in enumerate(column_names, start=1):
                 if tipo in str(col_name) and col_name not in ['FECHA', 'GENERADORA']:
                     columnas_a_sumar.append(get_column_letter(idx))
             
-            # Crear fórmula SUM para esta fila
             if columnas_a_sumar:
-                # Encontrar la fila de datos de esta generadora
                 fila_datos = None
                 for i, row_data in enumerate(data_values):
-                    if row_data[1] == gen:  # columna 2 es GENERADORA
+                    if row_data[1] == gen: 
                         fila_datos = DATA_START_ROW + i
                         break
                 
                 if fila_datos:
-                    # Crear la fórmula sumando todas las columnas del tipo
                     formula_partes = [f"{col}{fila_datos}" for col in columnas_a_sumar]
                     formula = f'=SUM({",".join(formula_partes)})'
                     
@@ -311,10 +298,48 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
             cell.number_format = '0'
         
         fila_actual += 1
+
+    # try:
+    #     chart = LineChart()
+    #     chart.title = "Consignas por hora"
+    #     chart.style = 12  
+    #     chart.y_axis.title = "Valor"
+    #     chart.x_axis.title = "Horas"
+
+    #     columnas_consigna = [i + 1 for i, c in enumerate(column_names) if 'CONSIGNA' in str(c).upper()]
+
+    #     print(columnas_consigna)
+        
+    #     if not columnas_consigna:
+    #         print("No se encontraron columnas con 'CONSIGNA' para graficar.")
+    #         return
+        
+    #     cats = Reference(worksheet, 
+    #                      min_col=1, 
+    #                      min_row=DATA_START_ROW, 
+    #                      max_row=DATA_START_ROW + len(data_values) - 1)
+        
+    #     for col in columnas_consigna:
+    #         values = Reference(worksheet, 
+    #                            min_col=col, 
+    #                            min_row=DATA_START_ROW, 
+    #                            max_row=DATA_START_ROW + len(data_values) - 1)
+    #         serie = Series(values, cats, title_from_data=True)
+    #         chart.series.append(serie)
+
+    #     chart.height = 10 
+    #     chart.width = 18   
+
+    #     FILA_GRAFICO = fila_actual + 3
+    #     worksheet.add_chart(chart, f"A{FILA_GRAFICO}")
+    #     print("Gráfico de líneas agregado correctamente.")
+        
+    # except Exception as e:
+    #     print(f"Error al crear el gráfico: {e}")
     
-    # ===== CONGELAR PANELES =====
-    freeze_col_letter = get_column_letter(3)
-    worksheet.freeze_panes = f'{freeze_col_letter}{DATA_START_ROW}'
+    # # ===== CONGELAR PANELES =====
+    # freeze_col_letter = get_column_letter(3)
+    # worksheet.freeze_panes = f'{freeze_col_letter}{DATA_START_ROW}'
     
-    worksheet.row_dimensions[FILA_HORA_COMBINADA].height = 25
-    worksheet.row_dimensions[FILA_COLUMNAS].height = 30
+    # worksheet.row_dimensions[FILA_HORA_COMBINADA].height = 25
+    # worksheet.row_dimensions[FILA_COLUMNAS].height = 30
