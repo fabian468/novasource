@@ -330,4 +330,4 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
         fila_actual += 1
 
     # Generar gráfico
-    generarGrafico(column_names, data_values, generadoras, horas_ordenadas, worksheet, fila_actual , DATA_START_ROW)
+    generarGrafico(column_names, data_values, generadoras,  worksheet, fila_actual , DATA_START_ROW)
