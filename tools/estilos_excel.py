@@ -3,6 +3,28 @@ from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image
 import pandas as pd
 from openpyxl.chart import LineChart, Reference, Series
+# from tools.GeneradorGrafico import generarGrafico
+from GeneradorGrafico import generarGrafico
+
+colores = {
+    "header_hora_fill": "203864",
+    "header_fill": "4472C4",
+    "header_font": "FFFFFF",
+    "row_fill_1": "D9E1F2",
+    "row_fill_2": "FFFFFF",
+    "gen_actual_fill": "E2EFDA",
+    "monto_fill": "FCE4D6",
+    "consigna_fill": "FFF2CC",
+    "totales_header_fill": "305496",
+    "totales_header_font": "FFFFFF",
+    "totales_gen_fill": "D9E1F2",
+    "totales_data_font": "000000",
+    # Colores adicionales (por si se requieren más variantes)
+    "accent_1": "B4C7E7",
+    "accent_2": "9BC2E6",
+    "danger": "F8CBAD",
+    "success": "E2EFDA",
+}
 
 
 def insertar_logo(worksheet, path_logo="assets/logo.png", logo_height_rows=4, logo_width_cols=5):
@@ -33,32 +55,33 @@ def insertar_logo(worksheet, path_logo="assets/logo.png", logo_height_rows=4, lo
 
 
 def aplicar_formato_con_horas(writer, sheet_name, df):
-    workbook = writer.book
     worksheet = writer.sheets[sheet_name]
     
-    header_hora_fill = PatternFill(start_color="203864", end_color="203864", fill_type="solid")
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    header_font_hora = Font(bold=True, color="FFFFFF", size=12)
-    header_font = Font(bold=True, color="FFFFFF", size=10)
+    header_hora_fill = PatternFill(start_color=colores["header_hora_fill"], end_color=colores["header_hora_fill"], fill_type="solid")
+    header_fill = PatternFill(start_color=colores["header_fill"], end_color=colores["header_fill"], fill_type="solid")
+    header_font_hora = Font(bold=True, color=colores["header_font"], size=12)
+    header_font = Font(bold=True, color=colores["header_font"], size=10)
     
-    row_fill_1 = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    row_fill_2 = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+    row_fill_1 = PatternFill(start_color=colores["row_fill_1"], end_color=colores["row_fill_1"], fill_type="solid")
+    row_fill_2 = PatternFill(start_color=colores["row_fill_2"], end_color=colores["row_fill_2"], fill_type="solid")
     
-    gen_actual_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
-    monto_fill = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
-    consigna_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
+    gen_actual_fill = PatternFill(start_color=colores["gen_actual_fill"], end_color=colores["gen_actual_fill"], fill_type="solid")
+    monto_fill = PatternFill(start_color=colores["monto_fill"], end_color=colores["monto_fill"], fill_type="solid")
+    consigna_fill = PatternFill(start_color=colores["consigna_fill"], end_color=colores["consigna_fill"], fill_type="solid")
     
     # Estilos para totales
-    totales_header_fill = PatternFill(start_color="305496", end_color="305496", fill_type="solid")
-    totales_header_font = Font(bold=True, color="FFFFFF", size=11)
-    totales_gen_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    totales_data_font = Font(bold=True, size=10)
+    totales_header_fill = PatternFill(start_color=colores["totales_header_fill"], end_color=colores["totales_header_fill"], fill_type="solid")
+    totales_header_font = Font(bold=True, color=colores["totales_header_font"], size=11)
+    totales_gen_fill = PatternFill(start_color=colores["totales_gen_fill"], end_color=colores["totales_gen_fill"], fill_type="solid")
+    totales_data_font = Font(bold=True, size=10, color=colores["totales_data_font"])
     
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     thick_border = Border(left=Side(style='medium'), right=Side(style='medium'), top=Side(style='medium'), bottom=Side(style='medium'))
     
     num_rows = worksheet.max_row
     num_cols = worksheet.max_column
+
+    # print(f"Formateando hoja '{sheet_name}' con {num_rows} filas y {num_cols} columnas.")
     
     data_values = []
     column_names = []
@@ -88,8 +111,12 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
     FILA_HORA_COMBINADA = 1 + logo_offset_rows 
     FILA_COLUMNAS = 2 + logo_offset_rows
     DATA_START_ROW = FILA_COLUMNAS + 1
+
+    # print(f"Horas ordenadas encontradas: {df}")
+    
     
     horas_ordenadas = df.attrs.get('horas_ordenadas', [])
+
     
     if horas_ordenadas:
         cell = worksheet.cell(row=FILA_HORA_COMBINADA, column=1)
@@ -124,11 +151,14 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
         
         worksheet.merge_cells(f'B{FILA_HORA_COMBINADA}:B{FILA_COLUMNAS}')
         
-        col_num = 3 
+        #por si quiero aumentar los datos por hora
+        col_num = 3
+
         for hora in horas_ordenadas:
             start_col = col_num
             end_col = start_col + 2
             
+            #transforma numero de columna a letra
             start_letter = get_column_letter(start_col)
             end_letter = get_column_letter(end_col)
             
@@ -179,11 +209,11 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
             
             if 'GEN.ACTUAL' in col_name:
                 cell.fill = gen_actual_fill
-                cell.font = Font(bold=True)
             elif 'MONTO' in col_name:
                 cell.fill = monto_fill
             elif 'CONSIGNA' in col_name:
                 cell.fill = consigna_fill
+                cell.font = Font(bold=True)
             elif col_num in [1, 2]:
                 cell.fill = row_fill
             else:
@@ -299,47 +329,5 @@ def aplicar_formato_con_horas(writer, sheet_name, df):
         
         fila_actual += 1
 
-    # try:
-    #     chart = LineChart()
-    #     chart.title = "Consignas por hora"
-    #     chart.style = 12  
-    #     chart.y_axis.title = "Valor"
-    #     chart.x_axis.title = "Horas"
-
-    #     columnas_consigna = [i + 1 for i, c in enumerate(column_names) if 'CONSIGNA' in str(c).upper()]
-
-    #     print(columnas_consigna)
-        
-    #     if not columnas_consigna:
-    #         print("No se encontraron columnas con 'CONSIGNA' para graficar.")
-    #         return
-        
-    #     cats = Reference(worksheet, 
-    #                      min_col=1, 
-    #                      min_row=DATA_START_ROW, 
-    #                      max_row=DATA_START_ROW + len(data_values) - 1)
-        
-    #     for col in columnas_consigna:
-    #         values = Reference(worksheet, 
-    #                            min_col=col, 
-    #                            min_row=DATA_START_ROW, 
-    #                            max_row=DATA_START_ROW + len(data_values) - 1)
-    #         serie = Series(values, cats, title_from_data=True)
-    #         chart.series.append(serie)
-
-    #     chart.height = 10 
-    #     chart.width = 18   
-
-    #     FILA_GRAFICO = fila_actual + 3
-    #     worksheet.add_chart(chart, f"A{FILA_GRAFICO}")
-    #     print("Gráfico de líneas agregado correctamente.")
-        
-    # except Exception as e:
-    #     print(f"Error al crear el gráfico: {e}")
-    
-    # # ===== CONGELAR PANELES =====
-    # freeze_col_letter = get_column_letter(3)
-    # worksheet.freeze_panes = f'{freeze_col_letter}{DATA_START_ROW}'
-    
-    # worksheet.row_dimensions[FILA_HORA_COMBINADA].height = 25
-    # worksheet.row_dimensions[FILA_COLUMNAS].height = 30
+    # Generar gráfico
+    generarGrafico(column_names, data_values, generadoras, horas_ordenadas, worksheet, fila_actual , DATA_START_ROW)
