@@ -152,6 +152,13 @@ def ordenar_columnas(filtro):
                     col_nombre = f'{hora}_{columna}'
                     if col_nombre in resultado.columns:
                         nuevas_columnas.append(col_nombre)
+                    for col in resultado.columns:
+                if col not in ['FECHA', 'GENERADORA']:
+                    partes = col.split('_')
+                    hora = partes[0]
+                    tipo = partes[1] if len(partes) > 1 else ''
+                    
+    
             
             resultado = resultado[nuevas_columnas]
             
@@ -161,10 +168,16 @@ def ordenar_columnas(filtro):
                     partes = col.split('_')
                     hora = partes[0]
                     tipo = partes[1] if len(partes) > 1 else ''
-
+                
+                    if 'GEN.ACTUAL' in tipo:
+                        rename_dict[col] = 'GEN.ACTUAL'
+                    elif 'MONTO' in tipo:
+                        rename_dict[col] = 'MONTO'
+                    elif 'CONSIGNA' in tipo:
+                        rename_dict[col] = 'CONSIGNA'
+                        
                     rename_dict[col] = tipo
                     
-            
             resultado = resultado.rename(columns=rename_dict)
             resultado.attrs['horas_ordenadas'] = horas_unicas_sorted
             
